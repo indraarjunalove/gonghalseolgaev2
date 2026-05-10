@@ -183,6 +183,9 @@ async def get_index():
 def ai_decide_mode(max_mosfet_t, max_battery_t, pack_delta_v):
     if max_mosfet_t >= MOSFET_T_STOP or max_battery_t >= BATTERY_T_STOP:
         return "STOP", 1.0
+    # 2. 전압차 안전 체크 (추가: 0.01V 이하로 평탄화 완료 시 정지)
+    if pack_delta_v <= 0.01:
+        return "STOP", 1.0
 
     if AI_LOADED:
         feat = pd.DataFrame([[max_mosfet_t, max_battery_t, pack_delta_v]], columns=PACK_FEATURES)
@@ -496,7 +499,7 @@ async def websocket_endpoint(websocket: WebSocket):
             # ============================================================
             def add_display_noise(v_list, is_pwm=False):
                 # 출력용 가짜 노이즈 (상태 오염 X)
-                n_range = 0.008 if is_pwm else 0.001
+                n_range = 0.015 if is_pwm else 0.001
                 return [round(v + random.uniform(-n_range, n_range), 3) for v in v_list]
 
             payload = {
