@@ -326,7 +326,9 @@
             dac_bt:  createChart('dac_bt',  25, 60, true, 55)
         };
 
-        const ws = new WebSocket("ws://localhost:8000/ws");
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const host = window.location.host;
+        const ws = new WebSocket(`${protocol}//${host}/ws`);
 
         ws.onopen = () => {
             document.getElementById('status').innerText = "시스템 정상";
