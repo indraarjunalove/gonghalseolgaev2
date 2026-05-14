@@ -316,7 +316,7 @@ async def get_index():
 def ai_decide_mode(max_mosfet_t, max_battery_t, pack_delta_v):
     if max_mosfet_t >= MOSFET_T_STOP or max_battery_t >= BATTERY_T_STOP:
         return "STOP", 1.0
-    # 2. 전압차 안전 체크 (추가: 0.01V 이하로 평탄화 완료 시 정지)
+    # 전압차 체크 (0.01V 이하로 평탄화 완료 시 정지)
     if pack_delta_v <= 0.01:
         return "STOP", 1.0
 
@@ -613,7 +613,6 @@ async def websocket_endpoint(websocket: WebSocket):
                 dac_virt_min = min(sim_state["dac_v"])
                 virt_dv = max(sim_state["dac_v"]) - dac_virt_min
                 dac_virt_i_target = min(0.4, virt_dv * 2.5)
-                # [9번] 더 공정하게: base 0.30 → 0.15 (DAC도 작은 전류 가능)
                 dac_virt_i_base = max(0.15, dac_virt_i_target)  
 
                 if virt_dv > 0.001:
@@ -623,13 +622,13 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 for i in range(4):
                     ti = dac_currents[i]
-                    #미세 전류 구간에서(1A 미만) 선형 제어 발열은 전류랑에 거의 정비례하므로 제곱 안 하고 곱으로만 처리
+                    #미세 전류 구간에서(1A 미만) 선형 제어 발열은 전류랑에 거의 정비례하므로 제곱 아닌 단순곱
                     dt_m = ti * HEAT_DAC_MOSFET + random.uniform(-0.03, 0.03)
                     dt_b = ((sim_state["dac_mosfet_t"][i] - sim_state["dac_battery_t"][i]) * HEAT_BATTERY_CONDUCT + ti * HEAT_BATTERY_INTERNAL)
                     sim_state["dac_mosfet_t"][i] = max(TEMP_AMBIENT, sim_state["dac_mosfet_t"][i] + dt_m - COOL_K_MOSFET * (sim_state["dac_mosfet_t"][i] - TEMP_AMBIENT))
                     sim_state["dac_battery_t"][i] = max(TEMP_AMBIENT, sim_state["dac_battery_t"][i] + dt_b - COOL_K_BATTERY * (sim_state["dac_battery_t"][i] - TEMP_AMBIENT))
 
-                # [4번] 가상 DAC 우주도 PCB 열 결합 적용 (공정 비교)
+                #PCB 열 결합
                 sim_state["dac_mosfet_t"] = apply_pcb_heat_coupling(sim_state["dac_mosfet_t"])
                 sim_state["dac_v"] = balance_toward_min(sim_state["dac_v"], dac_currents, smoothness=0.5)
                 sim_state["dac_i"] = list(dac_currents)
@@ -645,7 +644,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
                 pwm_currents = [0.0] * 4
                 for i in range(4):
-                    # [9번] 더 공정하게: 최소 듀티 0.3 → 0.1 (적응형 더 강하게)
                     if pwm_virt_dv > 0.001:
                         virt_duty = 0.1 + 0.9 * (sim_state["pwm_v"][i] - pwm_virt_min) / pwm_virt_dv
                     else:
@@ -658,7 +656,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     sim_state["pwm_mosfet_t"][i] = max(TEMP_AMBIENT, sim_state["pwm_mosfet_t"][i] + dt_m - COOL_K_MOSFET * (sim_state["pwm_mosfet_t"][i] - TEMP_AMBIENT))
                     sim_state["pwm_battery_t"][i] = max(TEMP_AMBIENT, sim_state["pwm_battery_t"][i] + dt_b - COOL_K_BATTERY * (sim_state["pwm_battery_t"][i] - TEMP_AMBIENT))
 
-                # [4번] 가상 PWM 우주도 PCB 열 결합 적용
+                #PCB 열 결합
                 sim_state["pwm_mosfet_t"] = apply_pcb_heat_coupling(sim_state["pwm_mosfet_t"])
                 avg_currents = [pwm_currents[i] if pwm_currents[i] > 0 else 0.05 for i in range(4)]
                 sim_state["pwm_v"] = balance_toward_min(sim_state["pwm_v"], avg_currents, smoothness=1.0)
