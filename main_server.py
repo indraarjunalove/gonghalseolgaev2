@@ -720,7 +720,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
     except Exception as e:
         print(f"[ERROR] 웹소켓: {e}")
-        close_logger()
 
 if __name__ == "__main__":
     import uvicorn
