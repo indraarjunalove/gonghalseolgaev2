@@ -1,8 +1,7 @@
 """
-BMS AI 학습 스크립트 v2
 - AI 1: 모드 분류기 (RandomForestClassifier, 팩 단위)
 - AI 2: DAC 출력값 회귀기 (RandomForestRegressor, 셀 단위)
-- AI 3: PWM 듀티비 회귀기 (RandomForestRegressor, 셀 단위)  [신규]
+- AI 3: PWM 듀티비 회귀기 (RandomForestRegressor, 셀 단위)
 """
 import pandas as pd
 from sklearn.model_selection import train_test_split
