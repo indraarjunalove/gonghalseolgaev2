@@ -1,11 +1,10 @@
 """
-BMS 메인 서버 v2.2 (UART 통신 통합판)
 ==================================================
-[v2.2 변경사항]
+[홛인 및 수정사항]
 1. UART 통신 모듈 추가 (ESP32 ↔ 라즈베리파이)
 2. is_real_mode = True 시 ESP32에서 센서 데이터 수신
 3. AI 판단 후 ESP32로 제어 명령 전송
-4. 통신 실패 시 자동 fallback (시뮬 모드)
+4. 통신 실패 시 자동 fallback (가상 시뮬레이션)
 """
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import FileResponse
@@ -19,7 +18,7 @@ from datetime import datetime
 import joblib
 import pandas as pd
 
-# UART 통신용 (실제 모드에서만 사용, 시뮬 모드에서는 import 실패해도 OK)
+# UART 통신용 (실제 모드에서만 사용, 시뮬레이션 시 무시)
 try:
     import serial
     SERIAL_AVAILABLE = True
@@ -37,18 +36,18 @@ UART_BAUDRATE = 115200        # ESP32 표준 baud rate
 UART_TIMEOUT = 0.5            # 수신 타임아웃 (초)
 
 # ============================================================
-# [1번 대응] 실측 데이터 자동 로깅
+# 실측 데이터 자동 로깅(csv)
 # ============================================================
-# is_real_mode=True 일 때만 활성화 (시뮬 데이터는 안 쌓음)
+# is_real_mode=True 일 때만.. 실제측정값 저장
 # 매 tick의 입력+AI출력+결과(다음 tick 측정값)을 CSV로 저장
-# 추후 train_system.py로 재학습 가능
+# 추후 train_system.py로 재학습 시켜야함
 LOGGING_ENABLED = True              # 로깅 on/off
 LOG_DIR = 'logs'                    # 로그 폴더
 LOG_FILE_PREFIX = 'real_data'       # 파일명 prefix
 LOG_ROTATE_HOURS = 24               # N시간마다 새 파일
 
 # ============================================================
-# 설정
+# 설정 (실측 데이터 얻고 수정 필요)
 # ============================================================
 PACK_FEATURES = ['Max_Mosfet_T', 'Max_Battery_T', 'Pack_Delta_V']
 CELL_FEATURES = ['Mosfet_T', 'Battery_T', 'Cell_V', 'Delta_From_Min']
@@ -69,19 +68,16 @@ TEMP_AMBIENT = 28.0
 HEAT_BATTERY_CONDUCT = 0.02     
 HEAT_BATTERY_INTERNAL = 0.1     
 
-# ============================================================
-# [4번 수정] PCB 열 결합 계수
+# PCB 열 결합 계수
 # 이웃 셀 MOSFET이 뜨거우면 PCB 통해 이쪽도 따뜻해짐
 # 0 = 완전 독립 (이전 가정), 1 = 완전 결합 (현실)
-# 0.05 = 약한 결합 (현실적 PCB 가정)
-# ============================================================
+# 0.05 = 약한 결합 (PCB 가정)
 PCB_HEAT_COUPLING = 0.015   # 약한 결합 (현실적 PCB)
 
-# ============================================================
-# [5번 수정] 자가방전: 단조 감소 모델
+# 자가방전: 단조 감소 모델 가정
 # 셀마다 다른 속도 (개체 차이)
 # 시간당 1~3mV 떨어짐 (실제 18650 자가방전률)
-# ============================================================
+
 # 셀별 자가방전 속도 (V/sec), 한 번만 초기화
 SELF_DISCHARGE_RATES = [
     random.uniform(0.0000003, 0.0000008)  # 약 1~3 mV/hour
@@ -107,7 +103,7 @@ except Exception as e:
     print(f"[WARN] 모델 파일 없음: {e}")
 
 # ============================================================
-# UART 통신 (ESP32 ↔ 라즈베리파이)
+# UART 통신 (ESP32 ↔ 라즈베리파이) 확인!! 확인!!! 굴러가는지봐야됨!!!
 # ============================================================
 uart_conn = None  # 시리얼 객체 (지연 초기화)
 
@@ -179,7 +175,7 @@ def uart_send_command(mode, dac_vals, pwm_duty):
 
 
 # ============================================================
-# 시뮬레이션 상태
+# 시뮬레이션 초기값 가상 설정
 # ============================================================
 is_real_mode = False
 
@@ -204,9 +200,9 @@ sim_state = {
 }
 
 # ============================================================
-# [1번 대응] 실측 데이터 로깅 시스템
+# 실측 데이터 로깅 시스템
 # ============================================================
-# 매 tick 데이터를 CSV로 저장 → 실측 데이터 축적 → 재학습
+# 매 tick 데이터를 CSV로 저장 → 실측 데이터 축적 → 재학습에 써먹을 거 (이건수동)
 # 헤더: 시간 + 입력(V/MT/BT) + AI출력(mode/DAC/PWM) + 결과지표(다음 tick ΔV 변화량)
 LOG_HEADER = [
     'timestamp', 'tick',
@@ -219,7 +215,7 @@ LOG_HEADER = [
     'ai_mode', 'p_dac',
     'dac1', 'dac2', 'dac3', 'dac4',
     'pwm1', 'pwm2', 'pwm3', 'pwm4',
-    # 결과 (직전 tick 대비 ΔV 변화 — 이게 진짜 "효과")
+    # 결과 (직전 tick 대비 ΔV 변화 — 이게 진짜 효과)
     'delta_v_change',     # 양수 = ΔV 증가 (나빠짐), 음수 = ΔV 감소 (좋아짐)
     'mt_max_change',      # MOSFET 최고 온도 변화
     'bt_max_change',      # 배터리 최고 온도 변화
@@ -328,7 +324,7 @@ def ai_decide_mode(max_mosfet_t, max_battery_t, pack_delta_v):
         mode = clf.predict(feat)[0]
         return mode, p_dac
     
-    #AI 비로드시 비상용 판단 로직 (간단한 휴리스틱)
+    #AI 비로드시 비상용
     else:
         if max_mosfet_t >= 50 or max_battery_t >= 45 or pack_delta_v <= 0.02:
             return "DAC", 0.9
@@ -358,7 +354,7 @@ def ai_decide_cell_outputs(mode, mosfet_ts, battery_ts, voltages):
             pwm_duty = [int(max(0, min(255, v))) for v in pwm_duty]
             dac_vals = [0, 0, 0, 0]
 
-    # AI 비로드 시 비상용 코드
+    # AI 비로드 시 비상용
     else:
         if mode == "DAC":
             dac_vals = [int(min(4095, deltas[i] / 0.15 * 4095)) for i in range(4)]
@@ -370,8 +366,8 @@ def ai_decide_cell_outputs(mode, mosfet_ts, battery_ts, voltages):
     return dac_vals, pwm_duty
 
 # ============================================================
-# 셀 전압 변화 (물리법칙 강제 적용)
-# [5번 수정] 자가방전 단조 감소 + 측정 노이즈 분리
+# 셀 전압 변화 (물리법칙에 의해 가정 - 실측 데이터 뽑고 다시 함 봐야됨)
+# [자가방전 단조 감소 + 측정 노이즈 분리
 # ============================================================
 def discharge_cell(v, current, smoothness, cell_idx=0):
     """단일 셀 전압 변화 (상태 오염 방지)"""
@@ -416,7 +412,7 @@ def add_measurement_noise(cells_v):
     return [v + random.uniform(-MEASUREMENT_NOISE, MEASUREMENT_NOISE) for v in cells_v]
 
 # ============================================================
-# [4번 수정] PCB 열 결합 — 이웃 셀 MOSFET 발열이 PCB 통해 전파
+# PCB 열 결합 — 이웃 셀 MOSFET 발열이 PCB 통해 전파 - 실측 후 수정~~ 해야할듯?
 # ============================================================
 def apply_pcb_heat_coupling(temps):
     """4개 MOSFET이 같은 PCB에 있을 때 열 평형 보정
@@ -458,10 +454,11 @@ async def websocket_endpoint(websocket: WebSocket):
     pwm_phase = True
     prev_mode = "PWM"
     
-    # [1번 대응] 로거 초기화 (서버 시작 시 1회)
+    # 로거 초기화 (서버 시작 시 1회)
     if logger_state['file'] is None:
         init_logger()
 
+    # 통신코드이므로 일단 통신 해보고 다시 검토
     try:
         prev_real_mode = is_real_mode
 
@@ -520,7 +517,7 @@ async def websocket_endpoint(websocket: WebSocket):
 
                        
             # ----------------------------------------------------------
-            # [실제 모드] AI 출력을 ESP32로 전송 (UART)
+            # AI 출력을 ESP32로 전송 (UART)
             # ----------------------------------------------------------
             # 보내는 형식 (ESP32가 받아서 DAC/PWM 출력 적용):
             #   {"mode":"DAC", "dac":[1500,800,400,0], "pwm":[0,0,0,0]}
@@ -577,8 +574,8 @@ async def websocket_endpoint(websocket: WebSocket):
                 cells_bt[i] -= COOL_K_BATTERY * (cells_bt[i] - TEMP_AMBIENT)
                 cells_bt[i] = max(TEMP_AMBIENT, cells_bt[i])
             
-            # [4번 수정] PCB 열 결합 — MOSFET들이 PCB 통해 서로 영향
-            # 한 셀이 풀파워면 옆 셀도 살짝 따뜻해짐 (현실)
+            # PCB 열 결합 — MOSFET들이 PCB 통해 서로 영향
+            # 한 셀이 풀파워면 옆 셀도 살짝 따뜻해지는 거 반영
             cells_mt = apply_pcb_heat_coupling(cells_mt)
             # 배터리는 물리적으로 떨어져 있어 열 결합 거의 없음 (그대로)
 
@@ -600,9 +597,8 @@ async def websocket_endpoint(websocket: WebSocket):
 
             # ============================================================
             # 6. 가상 우주
-            # [9번 수정] 가상 우주를 더 공정하게:
-            #   - 적응형 동작 (이미 있음, 유지)
-            #   - PCB 열 결합도 동일 적용 (공정 비교)
+            #   - 적응형 동작
+            #   - PCB 열 결합도 동일 적용
             # ============================================================
             if mode == "PWM":
                 sim_state["pwm_v"] = list(sim_state["v"])
@@ -673,7 +669,7 @@ async def websocket_endpoint(websocket: WebSocket):
                 sim_state["dac_battery_t"] = list(cells_bt)
 
             # ============================================================
-            # 7. WebSocket payload (출력 시에만 센서 흔들림 연출)
+            # 7. WebSocket payload (출력 시 노이즈 연출용)
             # ============================================================
             def add_display_noise(v_list, is_pwm=False):
                 # 출력용 가짜 노이즈 (상태 오염 X)
