@@ -407,8 +407,8 @@ def balance_toward_min(cells, currents, smoothness):
     return new_cells
 
 def add_measurement_noise(cells_v):
-    """[5번] 표시용 측정 노이즈 (ADC 노이즈 + 양자화)
-    실제 셀 전압엔 영향 없음, 표시값만 흔들림"""
+    """표시용 측정 노이즈 (ADC 노이즈 + 양자화)
+    실제 셀 전압엔 영향 없고 표시값만 흔들림"""
     return [v + random.uniform(-MEASUREMENT_NOISE, MEASUREMENT_NOISE) for v in cells_v]
 
 # ============================================================
