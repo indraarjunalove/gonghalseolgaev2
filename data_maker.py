@@ -1,5 +1,4 @@
 """
-BMS 학습 데이터 생성기 v2
 - CSV 2개 생성:
   1. bms_pack_data.csv  : 분류기용 (팩 단위)
      입력: [max_mosfet_t, max_battery_t, pack_delta_v]
