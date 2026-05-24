@@ -326,7 +326,11 @@
             dac_bt:  createChart('dac_bt',  25, 60, true, 55)
         };
 
-        const ws = new WebSocket("ws://localhost:8000/ws");
+        // 1. 접속한 주소가 https이면 암호화된 wss://를, 로컬이면 ws://를 자동으로 선택
+        const protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+
+        // 2. 알아낸 프로토콜과 현재 접속 중인 주소를 합쳐서 완벽하게 웹소켓 연결
+        const ws = new WebSocket(protocol + window.location.host + "/ws");
 
         ws.onopen = () => {
             document.getElementById('status').innerText = "시스템 정상";
