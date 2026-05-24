@@ -5,7 +5,8 @@
     <title>BMS 하이브리드 제어 관제 beta</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #121212; color: white; text-align: center; margin: 0; padding: 10px; }
+        /* 1. 전체 배경 흰색, 텍스트 검은색으로 변경 */
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #ffffff; color: #000000; text-align: center; margin: 0; padding: 10px; }
         h2 { margin-bottom: 5px; }
 
         .control-panel { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 12px; flex-wrap: wrap; }
@@ -15,30 +16,31 @@
             border-radius: 5px; cursor: pointer; transition: 0.3s; }
         #toggleBtn:hover { background-color: #ffcc00; transform: scale(1.05); }
 
+        /* 2. 상태 표시 패널 연한 회색 및 테두리 조정 */
         #aiStatus {
-            background-color: #222; border: 2px solid #555; padding: 10px 18px;
+            background-color: #f5f5f5; border: 2px solid #ccc; padding: 10px 18px;
             font-size: 14px; font-weight: bold; border-radius: 5px; min-width: 240px;
-            transition: all 0.3s ease; text-align: left;
+            transition: all 0.3s ease; text-align: left; color: #000;
         }
         #aiStatus .ai-mode { font-size: 18px; }
-        #aiStatus .ai-meta { font-size: 12px; color: #aaa; margin-top: 4px; font-weight: normal; }
+        #aiStatus .ai-meta { font-size: 12px; color: #666; margin-top: 4px; font-weight: normal; }
 
         #sysInfo {
-            background-color: #1a1a1a; border: 1px solid #444; padding: 8px 14px;
+            background-color: #f5f5f5; border: 1px solid #ccc; padding: 8px 14px;
             font-size: 12px; border-radius: 5px;
             display: flex; gap: 16px;
         }
-        #sysInfo span.label { color: #888; }
-        #sysInfo span.value { color: #fff; font-weight: bold; margin-left: 4px; }
+        #sysInfo span.label { color: #555; }
+        #sysInfo span.value { color: #000; font-weight: bold; margin-left: 4px; }
 
         #cellOutputs {
-            background-color: #1a1a1a; border: 1px solid #444; padding: 8px 14px;
+            background-color: #f5f5f5; border: 1px solid #ccc; padding: 8px 14px;
             border-radius: 5px;
             display: flex; gap: 12px; font-size: 12px;
         }
-        .cell-out { padding: 4px 8px; border-left: 3px solid #555; }
-        .cell-out .cell-label { color: #888; font-size: 10px; }
-        .cell-out .cell-val { font-weight: bold; font-size: 14px; }
+        .cell-out { padding: 4px 8px; border-left: 3px solid #ccc; }
+        .cell-out .cell-label { color: #555; font-size: 10px; }
+        .cell-out .cell-val { font-weight: bold; font-size: 14px; color: #000; }
         .cell-out.c1 { border-color: #ff6384; }
         .cell-out.c2 { border-color: #36a2eb; }
         .cell-out.c3 { border-color: #cc65fe; }
@@ -46,13 +48,14 @@
 
         .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; width: 98%; max-width: 1900px; margin: 0 auto; }
         
-        .chart-container { background-color: #1e1e1e; border-radius: 8px; padding: 10px; height: 230px; display: flex; flex-direction: column; }
-        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; border-bottom: 1px solid #444; padding-bottom: 6px; }
+        /* 3. 차트 배경 연한 회색 및 헤더/텍스트 색상 조정 */
+        .chart-container { background-color: #f9f9f9; border-radius: 8px; border: 1px solid #eaeaea; padding: 10px; height: 230px; display: flex; flex-direction: column; }
+        .chart-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; border-bottom: 1px solid #ddd; padding-bottom: 6px; }
         .chart-title-box { text-align: left; }
-        .chart-title { font-size: 14px; font-weight: bold; color: #ddd; white-space: nowrap; } /* 줄바꿈 방지 */
-        .chart-desc { font-size: 11px; color: #888; font-weight: normal; display: block; margin-top: 2px;}
+        .chart-title { font-size: 14px; font-weight: bold; color: #222; white-space: nowrap; } 
+        .chart-desc { font-size: 11px; color: #666; font-weight: normal; display: block; margin-top: 2px;}
         
-        .live-values { display: flex; gap: 8px; font-size: 12px; background: #111; padding: 4px 8px; border-radius: 4px; border: 1px solid #333; font-family: monospace;}
+        .live-values { display: flex; gap: 8px; font-size: 12px; background: #ffffff; padding: 4px 8px; border-radius: 4px; border: 1px solid #ddd; font-family: monospace;}
         .val-c1 { color: #ff6384; font-weight: bold; }
         .val-c2 { color: #36a2eb; font-weight: bold; }
         .val-c3 { color: #cc65fe; font-weight: bold; }
@@ -61,17 +64,18 @@
         .canvas-wrapper { flex-grow: 1; position: relative; }
         canvas { width: 100% !important; height: 100% !important; position: absolute; top: 0; left: 0; }
 
+        /* 4. 밝은 테마에 맞춘 경고 애니메이션 색상 변경 */
         @keyframes pulse-danger {
-            0%, 100% { background-color: #4a1a1a; }
-            50% { background-color: #8a2a2a; }
+            0%, 100% { background-color: #ffe6e6; }
+            50% { background-color: #ffcccc; }
         }
         #aiStatus.mode-stop {
             animation: pulse-danger 1s infinite;
             border-color: #ff0000 !important;
-            color: #ff6666 !important;
+            color: #cc0000 !important;
         }
 
-        .row-real { border-top: 3px solid #00ffcc; }
+        .row-real { border-top: 3px solid #00c49f; } /* 청록색 가시성 조절 */
         .row-pwm { border-top: 3px solid #ff4444; }
         .row-dac { border-top: 3px solid #4488ff; }
     </style>
@@ -272,7 +276,6 @@
         function createChart(canvasId, yMin, yMax, isMulti=false, dangerLine=null) {
             const ctx = document.getElementById(canvasId).getContext('2d');
             
-            // 색칠(fill) 제거, 점(pointRadius) 활성화
             const datasets = isMulti ? [
                 { label: 'Cell 1', borderColor: CELL_COLORS[0], data: [], tension: 0.1, borderWidth: 2, fill: false, pointRadius: 3, pointBackgroundColor: CELL_COLORS[0] },
                 { label: 'Cell 2', borderColor: CELL_COLORS[1], data: [], tension: 0.1, borderWidth: 2, fill: false, pointRadius: 3, pointBackgroundColor: CELL_COLORS[1] },
@@ -299,8 +302,9 @@
                 options: {
                     responsive: true, maintainAspectRatio: false, animation: false,
                     scales: {
-                        y: { min: yMin, max: yMax, grid: { color: '#333' }, ticks: { color: '#aaa', font: { size: 9 } } },
-                        x: { grid: { color: '#333' }, ticks: { display: false } }
+                        /* 5. JS 캔버스 내부 그리드와 폰트 색상을 밝은 배경에 맞게 변경 */
+                        y: { min: yMin, max: yMax, grid: { color: '#e0e0e0' }, ticks: { color: '#555', font: { size: 9 } } },
+                        x: { grid: { color: '#e0e0e0' }, ticks: { display: false } }
                     },
                     plugins: {
                         legend: { display: false },
@@ -314,7 +318,6 @@
             real_v: createChart('real_v', 3.3, 4.3, true),
             pwm_v:  createChart('pwm_v',  3.3, 4.3, true),
             dac_v:  createChart('dac_v',  3.3, 4.3, true),
-            // 전류 축 범위를 0.0~0.55로 조정하여 0.2~0.4 차이를 더 잘 보이게 함
             real_i: createChart('real_i', -0.05, 0.55, true),
             pwm_i:  createChart('pwm_i',  -0.05, 0.55, true),
             dac_i:  createChart('dac_i',  -0.05, 0.55, true),
@@ -334,11 +337,11 @@
 
         ws.onopen = () => {
             document.getElementById('status').innerText = "시스템 정상";
-            document.getElementById('status').style.color = "#00ffcc";
+            document.getElementById('status').style.color = "#009977"; /* 밝은 배경용 초록색 */
         };
         ws.onclose = () => {
             document.getElementById('status').innerText = "연결 끊김";
-            document.getElementById('status').style.color = "#ff4444";
+            document.getElementById('status').style.color = "#cc0000"; /* 밝은 배경용 빨간색 */
         };
 
         function toggleDataMode() {
@@ -363,8 +366,8 @@
             modeDiv.innerText = `AI 판단: [${mode}]`;
             metaDiv.innerText = `P(DAC) = ${(p_dac*100).toFixed(1)}%`;
             const isPWM = mode === "PWM";
-            board.style.borderColor = isPWM ? "#ff4444" : "#4488ff";
-            board.style.color = isPWM ? "#ff4444" : "#4488ff";
+            board.style.borderColor = isPWM ? "#e03e3e" : "#3e7be0";
+            board.style.color = isPWM ? "#e03e3e" : "#3e7be0";
         }
 
         function updateSysInfo(data) {
@@ -372,7 +375,7 @@
             document.getElementById('info_minv').innerText = data.pack_min_v.toFixed(3);
             const aiEl = document.getElementById('info_ai');
             aiEl.innerText = data.ai_loaded ? "Loaded" : "Rule-base";
-            aiEl.style.color = data.ai_loaded ? "#00ffcc" : "#ffaa00";
+            aiEl.style.color = data.ai_loaded ? "#009977" : "#d48800";
         }
 
         function updateCellOutputs(data) {
