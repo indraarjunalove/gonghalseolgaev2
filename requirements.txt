@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-websockets
-pandas
-scikit-learn
-joblib
-pyserial
