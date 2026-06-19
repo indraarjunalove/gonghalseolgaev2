@@ -15,8 +15,7 @@
         /* ===== 상단 제어 패널 ===== */
         .control-panel { display: flex; justify-content: center; align-items: center; gap: 15px; margin-bottom: 12px; flex-wrap: wrap; }
         #status { font-size: 14px; font-weight: bold; }
-        #toggleBtn { background-color: #ffaa00; color: #000; border: none; padding: 10px 18px; font-size: 14px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; }
-        #toggleBtn:hover { background-color: #ffcc00; transform: scale(1.05); }
+
 
         /* AI 판단 결과 박스 */
         #aiStatus { background-color: #f0f0f0; border: 2px solid #b0b0b0; padding: 10px 18px; font-size: 14px; font-weight: bold; border-radius: 5px; min-width: 200px; transition: all 0.3s ease; text-align: left; }
@@ -66,7 +65,6 @@
     <!-- ===== 상단 제어 패널 ===== -->
     <div class="control-panel">
         <div id="status">연결 대기 중...</div>
-        <button id="toggleBtn" onclick="toggleDataMode()">실제 / 시뮬 토글</button>
         <div id="aiStatus">
             <div class="ai-mode" id="ai_mode_text">AI 모드: --</div>
             <div class="ai-meta" id="ai_p_dac">P_DAC: --</div>
